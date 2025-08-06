@@ -11,6 +11,7 @@
   SUPREME COURT OF THE STATE OF NEW YORK \
   NEW YORK COUNTY
 ]
+
 // Case caption
 #grid(
   columns: (1.8fr, 1fr),
@@ -18,7 +19,7 @@
   [
     #rect(
       width: 100%,
-      stroke: (top: 1pt, right: 1pt, bottom: 1pt, left: 0pt),
+      stroke: (top: .5pt, right: .5pt, bottom: .5pt, left: none),
       inset: 1em,
     )[
       #set text(font: "Equity B", size: 13pt)
@@ -35,12 +36,13 @@
   [
     #set text(font: "Equity B", size: 13pt)
     #set par(first-line-indent: 0pt)
-    #v(0.5em)
+    #v(1em)
     Indictment No. 8675309-25
     #line(length: 100%, stroke: 0.5pt)
     #strong[Memorandum of Law]
   ],
 )
+
 // Attorney Info
 #set text(font: "Equity B", size: 13pt)
 #align(bottom + right)[
@@ -59,8 +61,7 @@
 ]
 #pagebreak()
 
-#let cases-alphabet-displayed = state("cases-alphabet-displayed", ())
-#let statutes-alphabet-displayed = state("statutes-alphabet-displayed", ())
+#let cases-alphabet = state("cases-alphabet", ())
 
 #let case(case-name, reporter, pincite, court-year) = {
   let full-citation = (
@@ -70,29 +71,50 @@
   [#emph[#case-name], #reporter, #pincite, #court-year]
 }
 
+#show heading.where(level: 7): none
+
+#let statutes-alphabet = state("statutes-alphabet", ())
+
 #let statute(book, symbol, provision, subdivision) = {
   let full-citation = book + " " + symbol + " " + provision + " " + subdivision
   heading(level: 8, outlined: false)[#full-citation]
   [#book #symbol #provision #subdivision]
 }
 
+#show heading.where(level: 8): none
+
 #let cases-outline() = context {
-  let current-page = here().page()
-  let headings = query(selector(heading.where(level: 7)))
-  let sorted-headings = headings.sorted(
-    key: heading => {
-      if heading.body.has("text") { heading.body.text } else { "" }
-    },
-  )
+  let case-cites = query(selector(heading.where(level: 7)))
+
+  let case-citation-map = (:)
+  for case-cite in case-cites {
+    let case-citation-text = if case-cite.body.has("text") {
+      case-cite.body.text
+    } else {
+      ""
+    }
+    if case-citation-text != "" {
+      if case-citation-text not in case-citation-map {
+        case-citation-map.insert(case-citation-text, ())
+      }
+      let page-num = counter(page).at(case-cite.location()).first()
+      // Only add page number if it's not already in the list
+      if page-num not in case-citation-map.at(case-citation-text) {
+        case-citation-map.at(case-citation-text).push(page-num)
+      }
+    }
+  }
+
+  // Sort the citations alphabetically
+  let sorted-citations = case-citation-map.keys().sorted()
 
   [#strong[Cases] \ ]
 
-  sorted-headings
-    .map(entry => {
-      let citation-text = entry.body.text
-      let parts = citation-text.split(", ")
+  sorted-citations
+    .map(case-citation-text => {
+      let parts = case-citation-text.split(", ")
       let case-name = if parts.len() > 0 { parts.first() } else {
-        citation-text
+        case-citation-text
       }
       let rest = if parts.len() > 3 {
         ", " + parts.at(1) + ", " + parts.at(3)
@@ -105,52 +127,77 @@
       // Replace square brackets with parentheses for outline
       let rest-converted = rest.replace("[", "(").replace("]", ")")
 
-      let first-letter = citation-text.first()
-      if entry.numbering != none {
-        numbering(entry.numbering, ..counter(heading).at(entry.location()))
+      let first-letter = case-citation-text.first()
+      context if (first-letter not in cases-alphabet.get()) {
+        cases-alphabet.update(current => current + (first-letter,))
       }
-      [ ]
-      context if (first-letter not in cases-alphabet-displayed.get()) {
-        cases-alphabet-displayed.update(current => current + (first-letter,))
-      }
+
+      // Get all page numbers for this citation and join with commas
+      let page-nums = case-citation-map
+        .at(case-citation-text)
+        .map(str)
+        .join(", ")
+
       h(4pt) + emph[#case-name] + rest-converted
       box(width: 1fr, repeat[.])
-      [#counter(page).at(entry.location()).first()]
+      [#page-nums]
     })
     .join([ \ ])
 }
 
 #let statutes-outline() = context {
-  let current-page = here().page()
-  let headings = query(selector(heading.where(level: 8)))
-  let sorted-headings = headings.sorted(
-    key: heading => {
-      if heading.body.has("text") { heading.body.text } else { "" }
-    },
-  )
+  let statute-cites = query(selector(heading.where(level: 8)))
+
+  // Group headings by citation text to collect all page numbers
+  let statute-citation-map = (:)
+  for statute-cite in statute-cites {
+    let statute-citation-text = if statute-cite.body.has("text") {
+      statute-cite.body.text
+    } else {
+      ""
+    }
+    if statute-citation-text != "" {
+      if statute-citation-text not in statute-citation-map {
+        statute-citation-map.insert(statute-citation-text, ())
+      }
+      let page-num = counter(page).at(statute-cite.location()).first()
+      // Only add page number if it's not already in the list
+      if page-num not in statute-citation-map.at(statute-citation-text) {
+        statute-citation-map.at(statute-citation-text).push(page-num)
+      }
+    }
+  }
+
+  // Sort the citations alphabetically
+  let sorted-citations = statute-citation-map.keys().sorted()
 
   [#strong[Statutes] \ ]
 
-  sorted-headings
-    .map(entry => {
-      let citation-text = entry.body.text
+  sorted-citations
+    .map(statute-citation-text => {
       // Replace square brackets with parentheses for outline
-      let citation-converted = citation-text.replace("[", "(").replace("]", ")")
+      let citation-converted = statute-citation-text
+        .replace("[", "(")
+        .replace("]", ")")
 
-      let first-letter = citation-text.first()
-      if entry.numbering != none {
-        numbering(entry.numbering, ..counter(heading).at(entry.location()))
+      let first-letter = statute-citation-text.first()
+      context if (first-letter not in statutes-alphabet.get()) {
+        statutes-alphabet.update(current => current + (first-letter,))
       }
-      [ ]
-      context if (first-letter not in statutes-alphabet-displayed.get()) {
-        statutes-alphabet-displayed.update(current => current + (first-letter,))
-      }
+
+      // Get all page numbers for this citation and join with commas
+      let page-nums = statute-citation-map
+        .at(statute-citation-text)
+        .map(str)
+        .join(", ")
+
       h(4pt) + citation-converted
       box(width: 1fr, repeat[.])
-      [#counter(page).at(entry.location()).first()]
+      [#page-nums]
     })
     .join([ \ ])
 }
+
 #show heading.where(level: 1): set text(
   size: 13pt,
   weight: "bold",
@@ -159,8 +206,6 @@
 #show heading.where(level: 1): set align(center)
 #show heading.where(level: 1): it => { upper(it.body) }
 
-#show heading.where(level: 7): none
-#show heading.where(level: 8): none
 
 
 #counter(page).update(1)
@@ -258,7 +303,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit in #case("Apple v Orange
 
 ===== Fourth Level Heading
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua in #statute("CPLR", "§", "4518", "[a]") ut enim ad minim veniam. Quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea in #statute("Vehicle and Traffic Law", "§", "1192", "[2]") commodo consequat.
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua in #statute("CPLR", "", "4518", "[a]") ut enim ad minim veniam. Quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea in #statute("Vehicle and Traffic Law", "§", "1192", "[2]") commodo consequat.
 
 ====== Fifth Level Heading
 
@@ -281,3 +326,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
 ==== Final Third Level
 
 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua #statute("New York State Constitution", "Article", "I", "§ 6") ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat #case("Mapp v Ohio", "367 U.S. 643", "655", "(1961)") duis aute irure dolor in reprehenderit.
+
+== Third Main Heading
+
+More table authority testing here: #case("Adams v Baker", "123 F.3d 456", "460", "(3d Cir. 2000)"), #statute("CPL", "§", "140.10", "[1][a] (2020)"), #statute("CPL", sym.section, "140.10", "[1][b]")
