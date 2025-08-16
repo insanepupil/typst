@@ -61,8 +61,6 @@
 ]
 #pagebreak()
 
-#let cases-alphabet = state("cases-alphabet", ())
-
 #let case(case-name, reporter, pincite, court-year) = {
   let full-citation = (
     case-name + ", " + reporter + ", " + pincite + " " + court-year
@@ -73,7 +71,6 @@
 
 #show heading.where(level: 7): none
 
-#let statutes-alphabet = state("statutes-alphabet", ())
 
 #let statute(book, symbol, provision, subdivision) = {
   let full-citation = book + " " + symbol + " " + provision + " " + subdivision
@@ -98,47 +95,44 @@
         case-citation-map.insert(case-citation-text, ())
       }
       let page-num = counter(page).at(case-cite.location()).first()
-      // Only add page number if it's not already in the list
       if page-num not in case-citation-map.at(case-citation-text) {
         case-citation-map.at(case-citation-text).push(page-num)
       }
     }
   }
 
-  // Sort the citations alphabetically
-  let sorted-citations = case-citation-map.keys().sorted()
+  let sorted-case-citations = case-citation-map.keys().sorted()
 
+  set text(font: "Equity B", size: 12pt)
   [#strong[Cases] \ ]
+  set text(font: "Equity B", size: 13pt)
 
-  sorted-citations
+  sorted-case-citations
     .map(case-citation-text => {
-      let parts = case-citation-text.split(", ")
-      let case-name = if parts.len() > 0 { parts.first() } else {
+      let case-citation-parts = case-citation-text.split(", ")
+      let case-name = if case-citation-parts.len() > 0 {
+        case-citation-parts.first()
+      } else {
         case-citation-text
       }
-      let rest = if parts.len() > 3 {
-        ", " + parts.at(1) + ", " + parts.at(3)
-      } else if parts.len() > 1 {
-        ", " + parts.slice(1).join(", ")
+      let citation-remainder = if case-citation-parts.len() > 3 {
+        ", " + case-citation-parts.at(1) + ", " + case-citation-parts.at(3)
+      } else if case-citation-parts.len() > 1 {
+        ", " + case-citation-parts.slice(1).join(", ")
       } else {
         ""
       }
 
-      // Replace square brackets with parentheses for outline
-      let rest-converted = rest.replace("[", "(").replace("]", ")")
+      let case-remainder-converted = citation-remainder
+        .replace("[", "(")
+        .replace("]", ")")
 
-      let first-letter = case-citation-text.first()
-      context if (first-letter not in cases-alphabet.get()) {
-        cases-alphabet.update(current => current + (first-letter,))
-      }
-
-      // Get all page numbers for this citation and join with commas
       let page-nums = case-citation-map
         .at(case-citation-text)
         .map(str)
         .join(", ")
 
-      h(4pt) + emph[#case-name] + rest-converted
+      emph[#case-name] + case-remainder-converted
       box(width: 1fr, repeat[.])
       [#page-nums]
     })
@@ -148,7 +142,6 @@
 #let statutes-outline() = context {
   let statute-cites = query(selector(heading.where(level: 8)))
 
-  // Group headings by citation text to collect all page numbers
   let statute-citation-map = (:)
   for statute-cite in statute-cites {
     let statute-citation-text = if statute-cite.body.has("text") {
@@ -168,30 +161,25 @@
     }
   }
 
-  // Sort the citations alphabetically
-  let sorted-citations = statute-citation-map.keys().sorted()
+  let sorted-statute-citations = statute-citation-map.keys().sorted()
 
+  set text(font: "Equity B", size: 12pt)
   [#strong[Statutes] \ ]
+  set text(font: "Equity B", size: 13pt)
 
-  sorted-citations
+
+  sorted-statute-citations
     .map(statute-citation-text => {
-      // Replace square brackets with parentheses for outline
-      let citation-converted = statute-citation-text
+      let statute-citation-converted = statute-citation-text
         .replace("[", "(")
         .replace("]", ")")
 
-      let first-letter = statute-citation-text.first()
-      context if (first-letter not in statutes-alphabet.get()) {
-        statutes-alphabet.update(current => current + (first-letter,))
-      }
-
-      // Get all page numbers for this citation and join with commas
       let page-nums = statute-citation-map
         .at(statute-citation-text)
         .map(str)
         .join(", ")
 
-      h(4pt) + citation-converted
+      statute-citation-converted
       box(width: 1fr, repeat[.])
       [#page-nums]
     })
@@ -210,7 +198,7 @@
 
 #counter(page).update(1)
 
-//Table Page Settings
+//Table Pages Settings
 #set text(font: "Equity B", size: 12pt)
 #set page(
   paper: "us-letter",
@@ -262,28 +250,27 @@
   }
 }
 
-// Apply the custom numbering
 #set heading(numbering: custom-numbering)
 
 // Style headings. (All subs same indent per Garner.)
 #show heading.where(level: 2): it => {
-  set text(font: "Equity B", size: 13pt, weight: "bold")
+  set text(font: "Concourse 6", size: 13pt, weight: "bold")
   pad(left: 0.0in, it)
 }
 #show heading.where(level: 3): it => {
-  set text(font: "Equity B", size: 13pt, weight: "bold")
+  set text(font: "Concourse 6", size: 13pt, weight: "bold")
   pad(left: 0.25in, it)
 }
 #show heading.where(level: 4): it => {
-  set text(font: "Equity B", size: 13pt, weight: "bold")
+  set text(font: "Concourse 6", size: 13pt, weight: "bold")
   pad(left: 0.25in, it)
 }
 #show heading.where(level: 5): it => {
-  set text(font: "Equity B", size: 13pt, weight: "bold")
+  set text(font: "Concourse 6", size: 13pt, weight: "bold")
   pad(left: 0.25in, it)
 }
 #show heading.where(level: 6): it => {
-  set text(font: "Equity B", size: 13pt, weight: "bold")
+  set text(font: "Concourse 6", size: 13pt, weight: "bold")
   pad(left: 0.25in, it)
 }
 == Main Heading
@@ -330,3 +317,15 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor i
 == Third Main Heading
 
 More table authority testing here: #case("Adams v Baker", "123 F.3d 456", "460", "(3d Cir. 2000)"), #statute("CPL", "§", "140.10", "[1][a] (2020)"), #statute("CPL", sym.section, "140.10", "[1][b]")
+
+#set text(font: "Equity B", size: 12pt)
+
+#pad(left: 2.4in)[
+  Respectfully,
+  #v(4em)
+
+  #h(2.5in)
+  #line(length: 100%, stroke: .5pt)
+  #v(-10pt)
+  Cadmium Q. Eaglefeather \
+]
